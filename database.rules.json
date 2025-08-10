@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "frogs": {
+      ".read": true,
+      ".write": true
+    },
+    "chat": {
+      ".read": true,
+      ".write": true,
+      ".indexOn": "ts"
+    },
+    "triggers": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

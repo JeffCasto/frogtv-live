@@ -1,0 +1,257 @@
+# OBS Scene Configuration for FrogTV
+
+## Scene 1: "FrogStage" 
+```json
+{
+  "name": "FrogStage",
+  "sources": [
+    {
+      "type": "browser_source",
+      "name": "Frog Layer",
+      "settings": {
+        "url": "http://localhost:3000/stage",
+        "width": 1920,
+        "height": 1080,
+        "fps": 30,
+        "shutdown": false,
+        "restart_when_active": false,
+        "css": "body { background-color: rgba(0,0,0,0); margin: 0px auto; overflow: hidden; }"
+      },
+      "filters": [
+        {
+          "type": "chroma_key_filter_v2",
+          "name": "Chroma Key",
+          "settings": {
+            "key_color_type": "green",
+            "similarity": 80,
+            "smoothness": 80,
+            "spill": 100
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Scene 2: "TinyTV"
+```json
+{
+  "name": "TinyTV", 
+  "sources": [
+    {
+      "type": "browser_source", 
+      "name": "YouTube Player",
+      "settings": {
+        "url": "https://www.youtube.com/embed/videoseries?list=PLYourPlaylistID&autoplay=1&mute=1&controls=0",
+        "width": 854,
+        "height": 480
+      },
+      "filters": [
+        {
+          "type": "crop_pad_filter",
+          "name": "TV Frame Crop",
+          "settings": {
+            "left": 50,
+            "top": 50, 
+            "right": 50,
+            "bottom": 50
+          }
+        },
+        {
+          "type": "scaling_filter",
+          "name": "Tiny Scale",
+          "settings": {
+            "resolution": "320x240"
+          }
+        }
+      ],
+      "transform": {
+        "pos": { "x": 1200, "y": 400 },
+        "scale": { "x": 0.8, "y": 0.8 },
+        "rot": -5
+      }
+    }
+  ]
+}
+```
+
+## Composite Scene: "MainStream"  
+```json
+{
+  "name": "MainStream",
+  "sources": [
+    {
+      "type": "scene",
+      "name": "TinyTV Background",
+      "source_scene": "TinyTV"
+    },
+    {
+      "type": "scene", 
+      "name": "Frog Overlay",
+      "source_scene": "FrogStage"
+    },
+    {
+      "type": "text_gdiplus",
+      "name": "Watermark",
+      "settings": {
+        "text": "FrogTV Live • They're watching...",
+        "font": {
+          "face": "Consolas",
+          "size": 24,
+          "style": "Bold"
+        },
+        "color": 4278255360,
+        "opacity": 180
+      },
+      "transform": {
+        "pos": { "x": 50, "y": 1000 }
+      }
+    }
+  ]
+}
+```
+
+# Deployment Scripts
+
+## deploy.sh
+```bash
+#!/bin/bash
+set -e
+
+echo "🐸 Deploying FrogTV to the world..."
+
+# Build the web app
+cd web
+npm install
+npm run build
+cd ..
+
+# Deploy Firebase Functions  
+cd functions
+npm install
+npm run build
+firebase deploy --only functions
+cd ..
+
+# Deploy to Vercel
+cd web  
+vercel --prod
+cd ..
+
+# Initialize Firebase data
+echo "Initializing frog data..."
+curl -X POST https://your-region-your-project.cloudfunctions.net/initializeFrogs
+
+echo "🎉 FrogTV is LIVE! The frogs await their audience..."
+```
+
+## dev-setup.sh  
+```bash
+#!/bin/bash
+
+echo "🐸 Setting up FrogTV development environment..."
+
+# Install dependencies
+cd web && npm install && cd ..
+cd functions && npm install && cd ..
+
+# Start Firebase emulators
+firebase emulators:start --only database,functions &
+
+# Start Next.js dev server
+cd web && npm run dev &
+
+# Wait for services to start
+sleep 5
+
+echo "🎉 Dev environment ready!"
+echo "📺 OBS Browser Source: http://localhost:3000/stage"  
+echo "🌐 Main site: http://localhost:3000"
+echo "🔧 Firebase UI: http://localhost:4000"
+
+# Keep script running
+wait
+```
+
+## Environment Variables (.env.local)
+```bash
+# Firebase Configuration
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com  
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef
+
+# Mux Configuration
+NEXT_PUBLIC_MUX_PLAYBACK_ID=your_mux_playback_id
+
+# Optional: OpenAI for AI reactions
+OPENAI_API_KEY=sk-your-openai-key
+```
+
+## OBS Streaming Setup
+
+### Stream Settings
+- **Service**: Custom
+- **Server**: rtmp://global-live.mux.com/video/
+- **Stream Key**: [Your Mux Stream Key]
+
+### Output Settings
+- **Output Mode**: Advanced
+- **Encoder**: x264
+- **Bitrate**: 3000 Kbps  
+- **Keyframe Interval**: 2
+- **Preset**: veryfast
+- **Profile**: main
+
+### Video Settings
+- **Base Resolution**: 1920x1080
+- **Output Resolution**: 1920x1080  
+- **FPS**: 30
+
+## Quick Start Checklist
+```
+[ ] Clone repo: git clone [repo-url] frogtv-live
+[ ] Run: chmod +x deploy.sh dev-setup.sh
+[ ] Create Firebase project
+[ ] Create Mux account & get stream key
+[ ] Set up environment variables
+[ ] Run: ./dev-setup.sh
+[ ] Configure OBS scenes (import JSON above)
+[ ] Test localhost:3000/stage in OBS browser source
+[ ] Start streaming to Mux
+[ ] Deploy: ./deploy.sh  
+[ ] Tweet launch announcement with frog GIF
+[ ] Watch the chaos unfold
+```
+
+## Pro Tips for Maximum Chaos
+
+1. **Audio Reactivity**: Use VoiceMeeter + Virtual Audio Cable to pipe system audio to OBS, then use Whisper to transcribe and trigger frog reactions
+
+2. **Chat Commands**: Add more trigger words in the Firebase functions:
+   - "summon" → Toadfather sequence  
+   - "exodus" → Force a frog to walk off
+   - "philosophy" → Deep thoughts mode
+   - "party" → All frogs go crazy
+
+3. **Viewer Participation**: 
+   - Donation alerts trigger special animations
+   - Subscriber alerts change frog moods
+   - Poll integration for viewer choice of TV content
+
+4. **Easter Eggs**:
+   - Type "konami" in chat for secret frog dance
+   - Latin phrases trigger spooky mode
+   - Typing just "🐸" 10 times spawns temporary frog
+
+5. **Analytics Dashboard**: Build a simple admin panel showing:
+   - Live viewer count
+   - Chat message frequency  
+   - Frog mood history
+   - Trigger statistics
+
+Remember: The beauty is in the absurdity. The more inexplicable the frog behavior, the more compelling the experience becomes.
